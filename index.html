@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Evaluation Program Operating Simulator</title>
+  <!-- Pinned CDN Dependencies -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: 600; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+  <!-- Header & Navigation -->
+  <header class="bg-slate-900 text-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <i class="fa-solid fa-microchip text-blue-400 text-2xl" aria-hidden="true"></i>
+        <div>
+          <h1 class="text-xl font-bold leading-tight">AI Evaluation Program Operating Simulator</h1>
+          <p class="text-xs text-slate-400">Director Governance & Scale Decision Emulator</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3 text-xs bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
+        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-slate-300 font-mono">Mode: SYNTHETIC_DEMO v1.2.0</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Control Bar: Bounded Scenario Selector -->
+  <section class="bg-white border-b border-slate-200 px-4 py-3 shadow-sm">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+      <div class="flex items-center space-x-2">
+        <label for="scenarioSelect" class="text-sm font-semibold text-slate-700">Select Precomputed Scenario:</label>
+        <select id="scenarioSelect" onchange="loadScenario(this.value)" class="bg-slate-100 border border-slate-300 rounded-md px-3 py-1.5 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          <option value="CFG-101">CFG-101: Balanced Pilot (EXPAND)</option>
+          <option value="CFG-102">CFG-102: Category Drift (NARROW)</option>
+          <option value="CFG-103">CFG-103: Margin Squeeze (REPRICE)</option>
+          <option value="CFG-104">CFG-104: Weak-Metric Trap (STOP / BLOCK)</option>
+        </select>
+      </div>
+      <div class="text-xs text-slate-500 flex items-center space-x-4">
+        <span><strong class="text-slate-700">Audit Tag:</strong> <code id="auditTag" class="bg-slate-100 px-1.5 py-0.5 rounded text-blue-700">CFG-101</code></span>
+        <span><strong class="text-slate-700">Engine:</strong> <code class="bg-slate-100 px-1.5 py-0.5 rounded">JS Rule Engine (Precomputed Inputs)</code></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Workspace Tabs -->
+  <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
+    
+    <!-- Tab Navigation -->
+    <div class="flex border-b border-slate-200 mb-6 bg-white rounded-t-lg px-2 pt-2 shadow-sm">
+      <button onclick="switchTab('tab1')" id="btn-tab1" class="px-6 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 tab-active flex items-center space-x-2">
+        <i class="fa-solid fa-sliders" aria-hidden="true"></i><span>1. Define Pilot</span>
+      </button>
+      <button onclick="switchTab('tab2')" id="btn-tab2" class="px-6 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 flex items-center space-x-2">
+        <i class="fa-solid fa-chart-line" aria-hidden="true"></i><span>2. Run Delivery</span>
+      </button>
+      <button onclick="switchTab('tab3')" id="btn-tab3" class="px-6 py-3 text-sm font-medium text-slate-500 hover:text-slate-700 flex items-center space-x-2">
+        <i class="fa-solid fa-gavel" aria-hidden="true"></i><span>3. Scale Decision</span>
+      </button>
+    </div>
+
+    <!-- SCREEN 1: DEFINE PILOT -->
+    <div id="tab1" class="tab-content space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm col-span-2">
+          <h2 class="text-base font-bold text-slate-800 mb-3 flex items-center"><i class="fa-solid fa-file-contract text-blue-600 mr-2" aria-hidden="true"></i> Pilot Scope & Commercial Parameters</h2>
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+              <span class="text-xs text-slate-500 block">Deliverable Volume</span>
+              <span id="cfg-volume" class="font-semibold text-slate-800">150 Synthetic Cases</span>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+              <span class="text-xs text-slate-500 block">Pricing Model</span>
+              <span id="cfg-pricing" class="font-semibold text-slate-800">Per Accepted Deliverable</span>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+              <span class="text-xs text-slate-500 block">Target Delivery Margin</span>
+              <span id="cfg-target-margin" class="font-semibold text-emerald-600">≥ 30.0%</span>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+              <span class="text-xs text-slate-500 block">Reviewer SLA</span>
+              <span id="cfg-sla" class="font-semibold text-slate-800">Dual-Review (100% Coverage)</span>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100">
+            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Explicit Deterministic Acceptance Gates</h3>
+            <ul class="text-xs text-slate-600 space-y-2">
+              <li class="flex items-start"><i class="fa-solid fa-circle-dot text-slate-400 mt-0.5 mr-2" aria-hidden="true"></i> <div><strong>Holdout Accuracy Gate:</strong> Point Estimate ≥ 80.0% AND Wilson 95% CI Lower Bound ≥ 75.0%</div></li>
+              <li class="flex items-start"><i class="fa-solid fa-circle-dot text-slate-400 mt-0.5 mr-2" aria-hidden="true"></i> <div><strong>Reliability Gate (Cohen's κ):</strong> Target κ ≥ 0.70 (κ &lt; 0.50 triggers Hard Stop; 0.50 ≤ κ &lt; 0.70 requires Scope Narrowing)</div></li>
+              <li class="flex items-start"><i class="fa-solid fa-circle-dot text-slate-400 mt-0.5 mr-2" aria-hidden="true"></i> <div><strong>Safety Gate:</strong> Critical Policy & Safety Compliance Category Score ≥ 70.0% (&lt; 40.0% triggers Hard Stop)</div></li>
+              <li class="flex items-start"><i class="fa-solid fa-circle-dot text-slate-400 mt-0.5 mr-2" aria-hidden="true"></i> <div><strong>Commercial Gate:</strong> Net Delivery Margin ≥ 30.0% (&lt; 30.0% requires Repricing)</div></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <h2 class="text-base font-bold text-slate-800 mb-3"><i class="fa-solid fa-users text-blue-600 mr-2" aria-hidden="true"></i> Expert Roster Setup</h2>
+            <div class="space-y-3 text-sm">
+              <div class="flex justify-between items-center py-1.5 border-b border-slate-100">
+                <span class="text-slate-600">Qualified Domain Experts</span>
+                <span id="cfg-experts" class="font-semibold text-slate-800">12 Experts</span>
+              </div>
+              <div class="flex justify-between items-center py-1.5 border-b border-slate-100">
+                <span class="text-slate-600">Blended Hourly Rate</span>
+                <span id="cfg-rate" class="font-semibold text-slate-800">$65.00 / hr</span>
+              </div>
+              <div class="flex justify-between items-center py-1.5">
+                <span class="text-slate-600">Dataset Split</span>
+                <span class="font-semibold text-slate-800">90 Dev / 60 Protected Holdout</span>
+              </div>
+            </div>
+          </div>
+          <button onclick="switchTab('tab2')" class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg text-sm transition flex items-center justify-center">
+            <span>Execute Delivery Simulation</span><i class="fa-solid fa-arrow-right ml-2" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 2: RUN DELIVERY -->
+    <div id="tab2" class="tab-content hidden space-y-6">
+      <!-- Quality & Economic Metrics Header (Accessible Buttons) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <button type="button" onclick="openEvidence('accuracy')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-left hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Holdout Accuracy</span>
+          <div class="flex items-baseline justify-between mt-1">
+            <span id="metric-accuracy" class="text-2xl font-bold text-slate-900">88.3%</span>
+            <span id="metric-accuracy-ci" class="text-xs text-slate-500 font-mono">[77.8–94.2%]</span>
+          </div>
+          <p class="text-[11px] text-blue-600 mt-2 hover:underline"><i class="fa-solid fa-magnifying-glass mr-1" aria-hidden="true"></i>Inspect Wilson CIs & Dev Split</p>
+        </button>
+
+        <button type="button" onclick="openEvidence('kappa')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-left hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Cohen's Kappa (κ)</span>
+          <div class="flex items-baseline justify-between mt-1">
+            <span id="metric-kappa" class="text-2xl font-bold text-slate-900">0.81</span>
+            <span id="metric-kappa-status" class="text-xs font-semibold text-emerald-600">Strong</span>
+          </div>
+          <p class="text-[11px] text-blue-600 mt-2 hover:underline"><i class="fa-solid fa-magnifying-glass mr-1" aria-hidden="true"></i>Inspect 2x2 Agreement Matrix</p>
+        </button>
+
+        <button type="button" onclick="openEvidence('margin')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-left hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Delivery Margin</span>
+          <div class="flex items-baseline justify-between mt-1">
+            <span id="metric-margin" class="text-2xl font-bold text-slate-900">34.0%</span>
+            <span id="metric-margin-target" class="text-xs text-slate-500">Target ≥ 30%</span>
+          </div>
+          <p class="text-[11px] text-blue-600 mt-2 hover:underline"><i class="fa-solid fa-magnifying-glass mr-1" aria-hidden="true"></i>Inspect Cost & Margin Ledger</p>
+        </button>
+
+        <button type="button" onclick="openEvidence('rework')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-left hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Adjudication & Rework</span>
+          <div class="flex items-baseline justify-between mt-1">
+            <span id="metric-rework" class="text-2xl font-bold text-slate-900">18.5 hrs</span>
+            <span id="metric-rework-cost" class="text-xs text-slate-500">$1,200.00</span>
+          </div>
+          <p class="text-[11px] text-blue-600 mt-2 hover:underline"><i class="fa-solid fa-magnifying-glass mr-1" aria-hidden="true"></i>Inspect Adjudication Breakdown</p>
+        </button>
+
+      </div>
+
+      <!-- Charts Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <h3 class="text-sm font-bold text-slate-800 mb-1">Category-Level Accuracy Breakdown (N=60 Holdout)</h3>
+          <p class="text-xs text-slate-500 mb-4">Rolls up exactly to headline Holdout Accuracy</p>
+          <div class="h-64">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <h3 class="text-sm font-bold text-slate-800 mb-1">Unit Economics & Cost Ledger ($)</h3>
+          <p class="text-xs text-slate-500 mb-4">Direct labor, rework/adjudication, and tooling allocation</p>
+          <div class="h-64">
+            <canvas id="costChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 3: SCALE DECISION -->
+    <div id="tab3" class="tab-content hidden space-y-6">
+      <div id="decisionBanner" class="p-6 rounded-2xl border border-slate-200 bg-white shadow-md">
+        <div class="flex items-start justify-between">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-widest text-slate-500">Deterministic Rule Engine Output</span>
+            <h2 id="decisionTitle" class="text-3xl font-extrabold text-emerald-600 mt-1">EXPAND PROGRAM</h2>
+            <p id="decisionSubtitle" class="text-sm text-slate-600 mt-2 max-w-2xl">
+              All quality gates, Cohen's Kappa chance-corrected thresholds, and commercial delivery margins are satisfied.
+            </p>
+          </div>
+          <div id="decisionBadge" class="px-4 py-2 rounded-xl bg-emerald-100 text-emerald-800 font-bold text-sm flex items-center space-x-2 border">
+            <i class="fa-solid fa-gavel" aria-hidden="true"></i><span id="decisionBadgeText">APPROVED FOR SCALE</span>
+          </div>
+        </div>
+
+        <div class="mt-6 pt-6 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3 class="text-xs font-bold text-slate-500 uppercase mb-2">Secondary Corrective Action</h3>
+            <div id="correctiveBox" class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-700 leading-relaxed">
+              Transition from 100% dual-review to standard 20% audit sampling while maintaining specialist escalation queues.
+            </div>
+          </div>
+          <div>
+            <h3 class="text-xs font-bold text-slate-500 uppercase mb-2">Governance & Risk Notes</h3>
+            <div id="riskBox" class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-700 leading-relaxed">
+              Holdout performance shows no statistically clear divergence from development set. Margin buffer supports scaling.
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 flex justify-end">
+          <button onclick="openDefenseModal()" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-5 py-2.5 rounded-lg text-sm shadow transition flex items-center space-x-2">
+            <i class="fa-solid fa-shield-halved text-blue-400" aria-hidden="true"></i><span>Generate Program Governance Review Brief</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-white border-t border-slate-200 py-4 px-4 text-center text-xs text-slate-500">
+    Synthetic data and illustrative operational assumptions — not representative of any real company's actual economics.
+  </footer>
+
+  <!-- SLIDE-OVER EVIDENCE DRAWER -->
+  <div id="evidenceDrawer" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex justify-end">
+    <div class="bg-white w-full max-w-xl h-full shadow-2xl p-6 overflow-y-auto flex flex-col justify-between">
+      <div>
+        <div class="flex justify-between items-center pb-4 border-b border-slate-200">
+          <h3 id="drawerTitle" class="text-lg font-bold text-slate-800">Inspect Evidence</h3>
+          <button onclick="closeEvidence()" aria-label="Close drawer" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+        </div>
+        <div id="drawerBody" class="py-4 text-xs text-slate-700 space-y-4">
+          <!-- Dynamic evidence content -->
+        </div>
+      </div>
+      <div class="pt-4 border-t border-slate-200 flex justify-end">
+        <button onclick="closeEvidence()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold">Close Drawer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXECUTIVE DEFENSE MODAL -->
+  <div id="defenseModal" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+        <h3 class="text-base font-bold text-slate-900 flex items-center"><i class="fa-solid fa-shield-halved text-blue-600 mr-2" aria-hidden="true"></i> Program Governance Review</h3>
+        <button onclick="closeDefenseModal()" aria-label="Close modal" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+      <div id="defenseContent" class="text-xs text-slate-700 space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200 font-mono">
+        <!-- Generated text -->
+      </div>
+      <div class="flex justify-end space-x-3">
+        <button onclick="closeDefenseModal()" class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT & EMBEDDED DYNAMIC CALCULATION ENGINES -->
+  <script>
+    // BINOMIAL WILSON SCORE INTERVAL CALCULATOR
+    function calcWilson(k, n, z = 1.95996) {
+      if (n === 0) return { pt: "0.0", ci: "[0.0–0.0%]", lb: 0, ub: 0 };
+      const p = k / n;
+      const pt = (p * 100).toFixed(1);
+      const denominator = 1 + (z * z) / n;
+      const centre = p + (z * z) / (2 * n);
+      const spread = z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n));
+      const lb = Math.max(0, (centre - spread) / denominator) * 100;
+      const ub = Math.min(100, (centre + spread) / denominator) * 100;
+      return {
+        pt,
+        ci: `[${lb.toFixed(1)}–${ub.toFixed(1)}%]`,
+        lb: parseFloat(lb.toFixed(1)),
+        ub: parseFloat(ub.toFixed(1))
+      };
+    }
+
+    // PRECOMPUTED INPUT DATASETS (Exact integer counts & matrices)
+    const SCENARIOS = {
+      'CFG-101': {
+        id: 'CFG-101',
+        title: 'Balanced Pilot',
+        pricing: 'Per Accepted Deliverable ($120/item)',
+        unitPrice: 120,
+        volume: 150,
+        revenue: 18000,
+        directCost: 9880,
+        reworkCost: 1200,
+        toolingCost: 800,
+        reworkHrs: 18.5,
+        experts: '12 Qualified Experts',
+        rate: '$65.00 / hr',
+        hourlyRateNum: 65,
+        devK: 85, devN: 90,
+        hoK: 53, hoN: 60,
+        kappaMatrix: [[98, 6], [6, 40]], // N=150 evaluations
+        catCounts: [23, 18, 12], // Policy (23/25), Scheduling (18/20), Safety (12/15) -> Sum = 53
+        catTotals: [25, 20, 15]
+      },
+      'CFG-102': {
+        id: 'CFG-102',
+        title: 'Category Drift',
+        pricing: 'Per Accepted Deliverable ($120/item)',
+        unitPrice: 120,
+        volume: 150,
+        revenue: 18000,
+        directCost: 9200,
+        reworkCost: 2420,
+        toolingCost: 800,
+        reworkHrs: 37.2,
+        experts: '10 Qualified Experts',
+        rate: '$65.00 / hr',
+        hourlyRateNum: 65,
+        devK: 85, devN: 90,
+        hoK: 43, hoN: 60,
+        kappaMatrix: [[86, 9], [9, 46]], // N=150 evaluations
+        catCounts: [22, 13, 8], // Policy (22/25), Scheduling (13/20), Safety (8/15) -> Sum = 43
+        catTotals: [25, 20, 15]
+      },
+      'CFG-103': {
+        id: 'CFG-103',
+        title: 'Margin Squeeze',
+        pricing: 'Per Submitted Item ($90/item)',
+        unitPrice: 90,
+        volume: 150,
+        revenue: 13500,
+        directCost: 9590,
+        reworkCost: 680,
+        toolingCost: 800,
+        reworkHrs: 8.0,
+        experts: '15 Senior Specialists',
+        rate: '$85.00 / hr',
+        hourlyRateNum: 85,
+        devK: 86, devN: 90,
+        hoK: 54, hoN: 60,
+        kappaMatrix: [[100, 5], [5, 40]], // N=150 evaluations
+        catCounts: [24, 18, 12], // Policy (24/25), Scheduling (18/20), Safety (12/15) -> Sum = 54
+        catTotals: [25, 20, 15]
+      },
+      'CFG-104': {
+        id: 'CFG-104',
+        title: 'Weak-Metric Trap',
+        pricing: 'Per Accepted Deliverable ($120/item)',
+        unitPrice: 120,
+        volume: 150,
+        revenue: 18000,
+        directCost: 8200,
+        reworkCost: 1440,
+        toolingCost: 800,
+        reworkHrs: 32.0,
+        experts: '8 Generalist Reviewers',
+        rate: '$45.00 / hr',
+        hourlyRateNum: 45,
+        devK: 83, devN: 90,
+        hoK: 41, hoN: 60,
+        kappaMatrix: [[135, 6], [6, 3]], // N=150 evaluations (High class imbalance: 141 pos vs 9 neg)
+        catCounts: [22, 16, 3], // Policy (22/25), Scheduling (16/20), Safety (3/15) -> Sum = 41
+        catTotals: [25, 20, 15]
+      }
+    };
+
+    let currentConfig = 'CFG-101';
+    let catChart, costChart;
+
+    // DYNAMIC MATHEMATICAL CALCULATION ENGINES
+    function calcKappa(matrix) {
+      const [[a, b], [c, d]] = matrix;
+      const N = a + b + c + d;
+      if (N === 0) return { po: "0.0", pe: "0.0", kappa: "0.00", totalN: 0, statusText: "Unacceptable", statusClass: "text-rose-600 font-bold" };
+      const po = (a + d) / N;
+      const p_yes1 = (a + b) / N;
+      const p_yes2 = (a + c) / N;
+      const p_no1 = (c + d) / N;
+      const p_no2 = (b + d) / N;
+      const pe = (p_yes1 * p_yes2) + (p_no1 * p_no2);
+      const kappa = (1 - pe) !== 0 ? (po - pe) / (1 - pe) : 0;
+      const kVal = parseFloat(kappa.toFixed(2));
+      
+      let statusText = "Strong";
+      let statusClass = "text-emerald-600 font-bold";
+      if (kVal < 0.50) {
+        statusText = "Unacceptable";
+        statusClass = "text-rose-600 font-bold";
+      } else if (kVal < 0.70) {
+        statusText = "Moderate";
+        statusClass = "text-amber-600 font-semibold";
+      }
+
+      return {
+        po: (po * 100).toFixed(1),
+        pe: (pe * 100).toFixed(1),
+        kappa: kappa.toFixed(2),
+        totalN: N,
+        a, b, c, d,
+        statusText,
+        statusClass
+      };
+    }
+
+    function calcMargin(revenue, directCost, reworkCost, toolingCost) {
+      const totalCost = directCost + reworkCost + toolingCost;
+      const profit = revenue - totalCost;
+      const marginPct = revenue > 0 ? (profit / revenue) * 100 : 0;
+      return {
+        totalCost,
+        profit,
+        marginPct: marginPct.toFixed(1)
+      };
+    }
+
+    // DETERMINISTIC RULE ENGINE FOR SCALE DECISION
+    function evaluateGates(m) {
+      const hoW = calcWilson(m.hoK, m.hoN);
+      const hoPt = parseFloat(hoW.pt);
+      const hoLb = hoW.lb;
+      const cat3Pct = (m.catCounts[2] / m.catTotals[2]) * 100;
+
+      const { kappa } = calcKappa(m.kappaMatrix);
+      const { marginPct } = calcMargin(m.revenue, m.directCost, m.reworkCost, m.toolingCost);
+      const kVal = parseFloat(kappa);
+      const mVal = parseFloat(marginPct);
+
+      // Gate 1: Hard Stop (Critical Safety Failure < 40% OR Unreliable Reliability κ < 0.50)
+      if (cat3Pct < 40.0 || kVal < 0.50) {
+        return {
+          decision: "STOP / BLOCK EXPANSION",
+          badgeText: "CRITICAL QUALITY FAILURE",
+          badgeClass: "bg-rose-100 text-rose-800 border-rose-300",
+          decisionClass: "text-rose-600",
+          subtitle: `Critical safety/compliance failure in Critical Policy category (${cat3Pct.toFixed(1)}%) or unreliable reviewer agreement (κ = ${kVal}). Cannot compensate with margin.`,
+          corrective: "Halt program scaling immediately. Re-qualify expert pool, restructure task rubrics, and require 100% senior adjudication.",
+          risk: `High delivery margin (${mVal.toFixed(1)}%) CANNOT compensate for failing a critical quality/safety requirement.`
+        };
+      }
+
+      // Gate 2: Scope Narrowing (Holdout Accuracy < 80%, Lower Bound < 75%, Safety < 70%, OR κ < 0.70)
+      if (hoPt < 80.0 || hoLb < 75.0 || cat3Pct < 70.0 || kVal < 0.70) {
+        return {
+          decision: "NARROW OFFERING",
+          badgeText: "RESTRICT SCOPE",
+          badgeClass: "bg-amber-100 text-amber-800 border-amber-300",
+          decisionClass: "text-amber-600",
+          subtitle: `Holdout accuracy (${hoPt.toFixed(1)}%), Reliability (κ = ${kVal}), or Critical Category score (${cat3Pct.toFixed(1)}%) fell below acceptance gates.`,
+          corrective: "Restrict high-risk policy categories to specialist review queue; clarify evaluation rubric before re-testing scope expansion.",
+          risk: "Generalization gap consistent with overfitting observed between development set and protected holdout set."
+        };
+      }
+
+      // Gate 3: Commercial Repricing (Margin < 30%)
+      if (mVal < 30.0) {
+        return {
+          decision: "REPRICE CONTRACT",
+          badgeText: "COMMERCIAL REVISION REQUIRED",
+          badgeClass: "bg-blue-100 text-blue-800 border-blue-300",
+          decisionClass: "text-blue-600",
+          subtitle: `Quality criteria satisfied (Holdout ${hoPt.toFixed(1)}%, κ = ${kVal}), but delivery margin (${mVal.toFixed(1)}%) is below commercial target (≥ 30.0%).`,
+          corrective: "Renegotiate contract pricing model (shift from per-submitted to per-accepted) or optimize dual-review coverage to restore margin.",
+          risk: "High quality delivered at a commercial loss under current pricing SLA."
+        };
+      }
+
+      // Gate 4: All Gates Satisfied
+      return {
+        decision: "EXPAND PROGRAM",
+        badgeText: "APPROVED FOR SCALE",
+        badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-300",
+        decisionClass: "text-emerald-600",
+        subtitle: `All quality gates (Holdout ${hoPt.toFixed(1)}%), inter-rater reliability (κ = ${kVal}), and commercial margins (${mVal.toFixed(1)}%) are satisfied.`,
+        corrective: "Transition from 100% dual-review to standard 20% audit sampling while maintaining specialist escalation queues.",
+        risk: "Holdout performance shows no statistically clear divergence from development set. Margin buffer supports scaling."
+      };
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('[id^="btn-tab"]').forEach(el => el.classList.remove('tab-active'));
+      document.getElementById(tabId).classList.remove('hidden');
+      document.getElementById('btn-' + tabId).classList.add('tab-active');
+      if (tabId === 'tab2') renderCharts();
+    }
+
+    function loadScenario(cfgId) {
+      currentConfig = cfgId;
+      const data = SCENARIOS[cfgId];
+      const hoW = calcWilson(data.hoK, data.hoN);
+      const kappaRes = calcKappa(data.kappaMatrix);
+      const marginRes = calcMargin(data.revenue, data.directCost, data.reworkCost, data.toolingCost);
+      const decisionRes = evaluateGates(data);
+
+      document.getElementById('auditTag').innerText = data.id;
+      document.getElementById('cfg-pricing').innerText = data.pricing;
+      document.getElementById('cfg-experts').innerText = data.experts;
+      document.getElementById('cfg-rate').innerText = data.rate;
+
+      document.getElementById('metric-accuracy').innerText = `${hoW.pt}%`;
+      document.getElementById('metric-accuracy-ci').innerText = hoW.ci;
+      document.getElementById('metric-kappa').innerText = kappaRes.kappa;
+      document.getElementById('metric-kappa-status').innerText = kappaRes.statusText;
+      document.getElementById('metric-kappa-status').className = `text-xs ${kappaRes.statusClass}`;
+      document.getElementById('metric-margin').innerText = `${marginRes.marginPct}%`;
+      document.getElementById('metric-rework').innerText = `${data.reworkHrs} hrs`;
+      document.getElementById('metric-rework-cost').innerText = `$${data.reworkCost.toLocaleString()}`;
+
+      document.getElementById('decisionTitle').innerText = decisionRes.decision;
+      document.getElementById('decisionTitle').className = `text-3xl font-extrabold mt-1 ${decisionRes.decisionClass}`;
+      document.getElementById('decisionSubtitle').innerText = decisionRes.subtitle;
+      document.getElementById('decisionBadge').className = `px-4 py-2 rounded-xl font-bold text-sm flex items-center space-x-2 border ${decisionRes.badgeClass}`;
+      document.getElementById('decisionBadgeText').innerText = decisionRes.badgeText;
+      document.getElementById('correctiveBox').innerText = decisionRes.corrective;
+      document.getElementById('riskBox').innerText = decisionRes.risk;
+
+      if (!document.getElementById('tab2').classList.contains('hidden')) renderCharts();
+    }
+
+    function renderCharts() {
+      const data = SCENARIOS[currentConfig];
+      const catPcts = data.catCounts.map((k, idx) => ((k / data.catTotals[idx]) * 100).toFixed(1));
+
+      if (catChart) catChart.destroy();
+      catChart = new Chart(document.getElementById('categoryChart'), {
+        type: 'bar',
+        data: {
+          labels: [
+            `Policy Explanations (${data.catCounts[0]}/${data.catTotals[0]})`, 
+            `Scheduling & Process (${data.catCounts[1]}/${data.catTotals[1]})`, 
+            `Critical Policy & Safety (${data.catCounts[2]}/${data.catTotals[2]})`
+          ],
+          datasets: [{
+            label: 'Accuracy (%)',
+            data: catPcts,
+            backgroundColor: ['#3b82f6', '#10b981', '#f43f5e']
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { max: 100, min: 0 } } }
+      });
+
+      if (costChart) costChart.destroy();
+      costChart = new Chart(document.getElementById('costChart'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Direct Labor', 'Adjudication & Rework', 'Tooling Allocation'],
+          datasets: [{
+            data: [data.directCost, data.reworkCost, data.toolingCost],
+            backgroundColor: ['#2563eb', '#f43f5e', '#64748b']
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
+
+    function openEvidence(type) {
+      const data = SCENARIOS[currentConfig];
+      const devW = calcWilson(data.devK, data.devN);
+      const hoW = calcWilson(data.hoK, data.hoN);
+      const kappaRes = calcKappa(data.kappaMatrix);
+      const marginRes = calcMargin(data.revenue, data.directCost, data.reworkCost, data.toolingCost);
+      const drawer = document.getElementById('evidenceDrawer');
+      const title = document.getElementById('drawerTitle');
+      const body = document.getElementById('drawerBody');
+
+      drawer.classList.remove('hidden');
+
+      if (type === 'accuracy') {
+        title.innerText = 'Evidence: Binomial Wilson 95% Confidence Intervals';
+        const isOverlap = devW.lb <= hoW.ub && hoW.lb <= devW.ub;
+        const overlapNote = isOverlap 
+          ? "<strong>Statistical Note:</strong> Dev CI and Holdout CI overlap. No statistically clear divergence between sets."
+          : "<strong>Statistical Note:</strong> Dev CI and Holdout CI do NOT overlap. Generalization gap is consistent with rubric overfitting under binomial assumptions.";
+        
+        const catPcts = data.catCounts.map((k, idx) => ((k / data.catTotals[idx]) * 100).toFixed(1));
+
+        body.innerHTML = `
+          <div class="space-y-3">
+            <p><strong>Config ID:</strong> ${data.id}</p>
+            <div class="p-3 bg-slate-50 border rounded">
+              <p><strong>Development Accuracy (${data.devK}/${data.devN}):</strong> ${devW.pt}% ${devW.ci}</p>
+              <p><strong>Protected Holdout Accuracy (${data.hoK}/${data.hoN}):</strong> ${hoW.pt}% ${hoW.ci}</p>
+            </div>
+            <div class="p-3 ${isOverlap ? 'bg-blue-50 border-blue-200 text-blue-800' : 'bg-amber-50 border-amber-200 text-amber-800'} border rounded">
+              ${overlapNote}
+            </div>
+            <h4 class="font-bold text-slate-800 text-xs uppercase pt-2">Category Rollup Breakdown (N=60)</h4>
+            <ul class="space-y-1">
+              <li>• Policy Explanations: ${data.catCounts[0]}/${data.catTotals[0]} cases (${catPcts[0]}%)</li>
+              <li>• Scheduling & Process: ${data.catCounts[1]}/${data.catTotals[1]} cases (${catPcts[1]}%)</li>
+              <li>• Critical Policy & Safety Compliance: ${data.catCounts[2]}/${data.catTotals[2]} cases (${catPcts[2]}%)</li>
+              <li class="pt-1 font-semibold border-t">• Total Holdout Accuracy: ${data.hoK}/60 cases (${hoW.pt}%)</li>
+            </ul>
+          </div>
+        `;
+      } else if (type === 'kappa') {
+        title.innerText = 'Evidence: 2x2 Agreement Matrix & Cohen\'s Kappa';
+        const { po, pe, kappa, totalN, a, b, c, d } = kappaRes;
+        body.innerHTML = `
+          <div class="space-y-3">
+            <p><strong>Total Dual Evaluations (N):</strong> ${totalN}</p>
+            <div class="p-3 bg-slate-50 border rounded">
+              <h4 class="font-bold text-slate-800 mb-2">2x2 Inter-Rater Confusion Matrix</h4>
+              <table class="w-full text-center border-collapse border border-slate-300">
+                <thead>
+                  <tr class="bg-slate-200"><th class="p-1 border"></th><th class="p-1 border">R2 Pass</th><th class="p-1 border">R2 Fail</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td class="p-1 border font-bold">R1 Pass</td><td class="p-1 border bg-emerald-50">${a}</td><td class="p-1 border bg-amber-50">${b}</td></tr>
+                  <tr><td class="p-1 border font-bold">R1 Fail</td><td class="p-1 border bg-amber-50">${c}</td><td class="p-1 border bg-rose-50">${d}</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="p-3 bg-slate-50 border rounded space-y-1">
+              <p>• Observed Agreement (P<sub>o</sub>): <strong>${po}%</strong></p>
+              <p>• Chance Expected Agreement (P<sub>e</sub>): <strong>${pe}%</strong></p>
+              <p>• Calculated Cohen's Kappa (κ): <strong class="text-blue-600 text-sm">${kappa}</strong> (${kappaRes.statusText})</p>
+            </div>
+            <p class="text-slate-600">Cohen's Kappa isolates true inter-annotator reliability from chance agreement, detecting class imbalance inflation.</p>
+          </div>
+        `;
+      } else if (type === 'rework') {
+        title.innerText = 'Evidence: Adjudication & Rework Breakdown';
+        const disagreementCount = data.kappaMatrix[0][1] + data.kappaMatrix[1][0];
+        body.innerHTML = `
+          <div class="space-y-3">
+            <div class="p-3 bg-slate-50 border rounded space-y-1">
+              <p><strong>Dual-Review Disagreement Cases:</strong> ${disagreementCount} cases</p>
+              <p><strong>Allocated Expert Rework Hours:</strong> ${data.reworkHrs} hrs</p>
+              <p><strong>Blended Hourly Expert Rate:</strong> ${data.rate}</p>
+              <p>• Rework Labor Cost: <strong class="text-rose-600">$${data.reworkCost.toLocaleString()}</strong></p>
+            </div>
+            <p class="text-slate-600">Rework and adjudication costs stem directly from dual-review disagreement routing, senior expert calibration, and category re-evaluations.</p>
+          </div>
+        `;
+      } else {
+        title.innerText = 'Evidence: Unit Economics & Ledger Accounting';
+        body.innerHTML = `
+          <div class="space-y-3">
+            <div class="p-3 bg-slate-50 border rounded space-y-1">
+              <p><strong>Contract Pricing Model:</strong> ${data.pricing}</p>
+              <p>• Deliverable Volume: ${data.volume} items @ $${data.unitPrice}/item</p>
+              <p>• Total Revenue: <strong class="text-emerald-700">$${data.revenue.toLocaleString()}</strong></p>
+            </div>
+            <div class="p-3 bg-slate-50 border rounded space-y-1">
+              <h4 class="font-bold text-slate-800 mb-1">Direct Cost Ledger</h4>
+              <p>• Direct Review Labor: $${data.directCost.toLocaleString()}</p>
+              <p>• Adjudication & Rework: $${data.reworkCost.toLocaleString()} (${data.reworkHrs} hrs)</p>
+              <p>• Allocated Tooling Infrastructure: $${data.toolingCost.toLocaleString()}</p>
+              <p class="pt-1 font-bold border-t">• Total Cost: $${marginRes.totalCost.toLocaleString()}</p>
+            </div>
+            <div class="p-3 bg-blue-50 border border-blue-200 text-blue-900 rounded">
+              <p><strong>Calculated Net Delivery Margin:</strong> <strong class="text-base">${marginRes.marginPct}%</strong> (Profit: $${marginRes.profit.toLocaleString()})</p>
+              <p class="text-xs text-blue-700 mt-1">Commercial Target Gate: ≥ 30.0%</p>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function closeEvidence() { document.getElementById('evidenceDrawer').classList.add('hidden'); }
+
+    function openDefenseModal() {
+      const data = SCENARIOS[currentConfig];
+      const devW = calcWilson(data.devK, data.devN);
+      const hoW = calcWilson(data.hoK, data.hoN);
+      const kappaRes = calcKappa(data.kappaMatrix);
+      const marginRes = calcMargin(data.revenue, data.directCost, data.reworkCost, data.toolingCost);
+      const decisionRes = evaluateGates(data);
+      const cat3Pct = ((data.catCounts[2] / data.catTotals[2]) * 100).toFixed(1);
+
+      document.getElementById('defenseContent').innerHTML = `
+        <strong>PROGRAM GOVERNANCE REVIEW</strong><br>
+        ----------------------------------------------------<br>
+        <strong>CONFIG IDENTIFIER:</strong> ${data.id} (${data.title})<br>
+        <strong>DECISION OUTPUT:</strong> ${decisionRes.decision}<br><br>
+        <strong>1. QUALITY & RELIABILITY GOVERNANCE:</strong><br>
+        - Protected Holdout Accuracy: ${hoW.pt}% (Wilson 95% CI: ${hoW.ci})<br>
+        - Critical Policy & Safety Score: ${cat3Pct}% (15 cases)<br>
+        - Cohen's Kappa Reliability (κ): ${kappaRes.kappa} (Observed Agreement: ${kappaRes.po}%)<br><br>
+        <strong>2. COMMERCIAL DELIVERY ECONOMICS:</strong><br>
+        - Program Revenue: $${data.revenue.toLocaleString()} | Delivery Cost: $${marginRes.totalCost.toLocaleString()}<br>
+        - Net Delivery Margin: ${marginRes.marginPct}% (Target: ≥ 30.0%)<br>
+        - Adjudication/Rework Labor: ${data.reworkHrs} hrs ($${data.reworkCost.toLocaleString()})<br><br>
+        <strong>3. MANDATED ACTION & GOVERNANCE RATIONALE:</strong><br>
+        - Action: ${decisionRes.corrective}<br>
+        - Rationale: ${decisionRes.risk}
+      `;
+      document.getElementById('defenseModal').classList.remove('hidden');
+    }
+
+    function closeDefenseModal() { document.getElementById('defenseModal').classList.add('hidden'); }
+
+    // Keyboard Shortcuts (Escape to close open drawers/modals)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeEvidence();
+        closeDefenseModal();
+      }
+    });
+
+    // Initialize default scenario
+    window.onload = () => loadScenario('CFG-101');
+  </script>
+</body>
+</html>
